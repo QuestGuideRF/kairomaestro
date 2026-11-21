@@ -1,0 +1,62 @@
+(() => {
+    const counterId = 111021951;
+    const sendGoal = (goal) => {
+        if (!goal || typeof window.ym !== "function") {
+            return;
+        }
+        try {
+            window.ym(counterId, "reachGoal", goal);
+        } catch (error) {
+            document.dispatchEvent(new CustomEvent("azbuka:analytics-call-failed"));
+        }
+    };
+
+    window.trackMetrikaGoal = sendGoal;
+
+    document.addEventListener("click", (event) => {
+        const target = event.target.closest("[data-metrika-goal], a[href]");
+        if (!target) {
+            return;
+        }
+
+        const explicitGoal = target.dataset.metrikaGoal;
+        if (explicitGoal) {
+            sendGoal(explicitGoal);
+            return;
+        }
+
+        const href = target.getAttribute("href") || "";
+        if (href.startsWith("tel:")) {
+            sendGoal("contact_phone");
+            return;
+        }
+        if (/^https:\/\/t\.me\//i.test(href)) {
+            sendGoal("contact_telegram");
+            return;
+        }
+
+        let pathname;
+        try {
+            pathname = new URL(href, window.location.href).pathname.replace(/\.php$/, "");
+        } catch (error) {
+            return;
+        }
+
+        if (pathname === "/quiz") {
+            sendGoal("quiz_start");
+        } else if (pathname === "/portfolio" || pathname.startsWith("/portfolio/")) {
+            sendGoal("portfolio_open");
+        } else if (pathname === "/login") {
+            sendGoal("login_open");
+        }
+    });
+
+    if (document.body.dataset.metrikaQuizSuccess === "1") {
+        sendGoal("quiz_submit_success");
+        if (typeof window.ym !== "function") {
+            document.addEventListener("azbuka:analytics-ready", () => {
+                sendGoal("quiz_submit_success");
+            }, { once: true });
+        }
+    }
+})();

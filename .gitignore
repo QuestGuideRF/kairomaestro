@@ -1,0 +1,9 @@
+.env
+bot/venv/
+__pycache__/
+*.py[cod]
+bot/runtime/*
+!bot/runtime/.gitkeep
+tmp/sessions/*
+uploads/*
+!uploads/.htaccess

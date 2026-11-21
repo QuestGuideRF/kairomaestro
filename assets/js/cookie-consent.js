@@ -1,0 +1,215 @@
+(() => {
+    const counterId = 111021951;
+    const storageKey = "azbuka_analytics_consent";
+    const accepted = "accepted";
+    const rejected = "rejected";
+    const counterSelector = "script[data-yandex-metrika]";
+    let counterState = "idle";
+    let counterScript = null;
+
+    const readChoice = () => {
+        try {
+            const choice = localStorage.getItem(storageKey);
+            return choice === accepted || choice === rejected ? choice : null;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    const writeChoice = (choice) => {
+        try {
+            localStorage.setItem(storageKey, choice);
+        } catch (error) {
+            return false;
+        }
+        return true;
+    };
+
+    const setCounterDisabled = (disabled) => {
+        window[`disableYaCounter${counterId}`] = disabled;
+    };
+
+    const expireCookie = (name) => {
+        const host = window.location.hostname;
+        const hostParts = host.split(".");
+        const domains = ["", host];
+        if (hostParts.length >= 2) {
+            domains.push(`.${hostParts.slice(-2).join(".")}`);
+        }
+        domains.forEach((domain) => {
+            const suffix = domain ? `; domain=${domain}` : "";
+            document.cookie = `${name}=; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax${suffix}`;
+        });
+    };
+
+    const clearMetrikaCookies = () => {
+        ["_ym_uid", "_ym_d", "_ym_isad", "_ym_visorc", "_ym_debug", "_ym_sup_debug"]
+            .forEach(expireCookie);
+        try {
+            sessionStorage.removeItem("_ym_debugger_state");
+        } catch (error) {
+            return;
+        }
+    };
+
+    const addConnectionHint = (rel, href, crossOrigin = false) => {
+        if (document.querySelector(`link[rel="${rel}"][href="${href}"]`)) {
+            return;
+        }
+        const link = document.createElement("link");
+        link.rel = rel;
+        link.href = href;
+        if (crossOrigin) {
+            link.crossOrigin = "anonymous";
+        }
+        document.head.appendChild(link);
+    };
+
+    const removeQueuedCounter = () => {
+        if (typeof window.ym === "function" && window.ym.azbukaQueue === true) {
+            delete window.ym;
+        }
+    };
+
+    const createCounterQueue = () => {
+        if (typeof window.ym === "function") {
+            return;
+        }
+        const queuedCounter = function () {
+            (queuedCounter.a = queuedCounter.a || []).push(arguments);
+        };
+        queuedCounter.a = [];
+        queuedCounter.l = Date.now();
+        queuedCounter.azbukaQueue = true;
+        window.ym = queuedCounter;
+    };
+
+    const markCounterUnavailable = () => {
+        counterState = "blocked";
+        setCounterDisabled(true);
+        removeQueuedCounter();
+        if (counterScript?.isConnected) {
+            counterScript.remove();
+        }
+        counterScript = null;
+        document.dispatchEvent(new CustomEvent("azbuka:analytics-unavailable"));
+    };
+
+    const loadCounter = () => {
+        if (counterState === "loading" || counterState === "ready") {
+            return;
+        }
+        counterState = "loading";
+        setCounterDisabled(false);
+        addConnectionHint("dns-prefetch", "//mc.yandex.ru");
+        addConnectionHint("preconnect", "https://mc.yandex.ru", true);
+        createCounterQueue();
+
+        document.querySelector(counterSelector)?.remove();
+        counterScript = document.createElement("script");
+        counterScript.async = true;
+        counterScript.src = `https://mc.yandex.ru/metrika/tag.js?id=${counterId}`;
+        counterScript.dataset.yandexMetrika = "true";
+        counterScript.addEventListener("load", () => {
+            if (readChoice() !== accepted) {
+                stopCounter();
+                return;
+            }
+            if (typeof window.ym === "function") {
+                window.ym.azbukaQueue = false;
+            }
+            counterState = "ready";
+            counterScript = null;
+            document.dispatchEvent(new CustomEvent("azbuka:analytics-ready"));
+        }, { once: true });
+        counterScript.addEventListener("error", markCounterUnavailable, { once: true });
+        document.head.appendChild(counterScript);
+
+        window.ym(counterId, "init", {
+            clickmap: true,
+            trackLinks: true,
+            accurateTrackBounce: true,
+            webvisor: true
+        });
+    };
+
+    const stopCounter = () => {
+        if (counterState === "ready" && typeof window.ym === "function") {
+            try {
+                window.ym(counterId, "destruct");
+            } catch (error) {
+                setCounterDisabled(true);
+            }
+        }
+        if (counterState === "loading" && counterScript?.isConnected) {
+            counterScript.remove();
+        }
+        counterScript = null;
+        counterState = "idle";
+        setCounterDisabled(true);
+        removeQueuedCounter();
+        clearMetrikaCookies();
+    };
+
+    const getBanner = () => document.querySelector("[data-cookie-consent]");
+    const hideBanner = () => {
+        const banner = getBanner();
+        if (banner) {
+            banner.hidden = true;
+        }
+    };
+    const showBanner = () => {
+        const banner = getBanner();
+        if (banner) {
+            banner.hidden = false;
+            banner.querySelector("[data-cookie-accept]")?.focus({ preventScroll: true });
+        }
+    };
+    const acceptAnalytics = () => {
+        writeChoice(accepted);
+        hideBanner();
+        loadCounter();
+    };
+    const rejectAnalytics = () => {
+        writeChoice(rejected);
+        hideBanner();
+        stopCounter();
+    };
+
+    const bindControls = () => {
+        document.querySelectorAll("[data-cookie-accept]").forEach((button) => {
+            button.addEventListener("click", acceptAnalytics);
+        });
+        document.querySelectorAll("[data-cookie-reject]").forEach((button) => {
+            button.addEventListener("click", rejectAnalytics);
+        });
+        document.querySelectorAll("[data-cookie-settings]").forEach((button) => {
+            button.addEventListener("click", showBanner);
+        });
+        const choice = readChoice();
+        if (choice === accepted) {
+            hideBanner();
+            loadCounter();
+        } else if (choice === rejected) {
+            hideBanner();
+            stopCounter();
+        } else {
+            stopCounter();
+            showBanner();
+        }
+    };
+
+    window.azbukaCookieConsent = {
+        accept: acceptAnalytics,
+        reject: rejectAnalytics,
+        open: showBanner,
+        status: readChoice,
+        analyticsStatus: () => counterState
+    };
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", bindControls, { once: true });
+    } else {
+        bindControls();
+    }
+})();

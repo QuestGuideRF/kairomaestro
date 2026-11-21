@@ -1,0 +1,104 @@
+Options -Indexes
+DirectoryIndex index.php
+AddDefaultCharset UTF-8
+
+<IfModule mod_mime.c>
+    AddType "text/css; charset=UTF-8" .css
+    AddType "application/javascript; charset=UTF-8" .js
+    AddType "image/svg+xml; charset=UTF-8" .svg
+    AddType "image/avif" .avif
+    AddType "image/webp" .webp
+    AddType "image/x-icon" .ico
+    AddType "image/png" .png
+    AddType "text/plain; charset=UTF-8" .txt
+    AddType "application/xml; charset=UTF-8" .xml
+    AddType "application/manifest+json; charset=UTF-8" .webmanifest
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteRule ^\.well-known/ - [L]
+    RewriteCond %{HTTP_HOST} !^azbukadecor\.ru$ [NC]
+    RewriteRule ^ https://azbukadecor.ru%{REQUEST_URI} [R=301,L,NE,QSA]
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    RewriteRule ^ https://azbukadecor.ru%{REQUEST_URI} [R=301,L,NE,QSA]
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{THE_REQUEST} \s/+[^?\s]+/[?\s] [NC]
+    RewriteRule ^(.+)/$ /$1 [R=301,L,NE]
+    RewriteCond %{THE_REQUEST} \s/+sitemap\.php(?:[?\s]) [NC]
+    RewriteRule ^sitemap\.php$ /sitemap.xml [R=301,L,NE]
+    RewriteRule ^favicon\.ico$ - [L,NC]
+    RewriteRule ^favicon-48x48\.png$ - [L,NC]
+    RewriteRule ^favicon-32x32\.png$ - [L,NC]
+    RewriteRule ^favicon-16x16\.png$ - [L,NC]
+    RewriteRule ^apple-touch-icon\.png$ - [L,NC]
+    RewriteRule ^site\.webmanifest$ - [L,NC]
+    RewriteRule ^android-chrome-192x192\.png$ - [L,NC]
+    RewriteRule ^android-chrome-512x512\.png$ - [L,NC]
+    RewriteRule ^robots\.txt$ - [L,NC]
+    RewriteRule ^llms\.txt$ - [L,NC]
+    RewriteRule (^|/)\. - [F,L]
+    RewriteRule ^(config|classes|includes|migrations|bot|tmp)/ - [F,L]
+    RewriteRule \.(?:sql|md|ini|log|py|lock)$ - [F,L,NC]
+    RewriteRule ^uploads/(?:chat|materials|references|finance|timeline|concepts|reviews|receipts|candidate)/ - [F,L,NC]
+    RewriteRule ^uploads/.*\.(php|phtml|phar|cgi|pl)$ - [F,L,NC]
+
+    RewriteRule ^sitemap\.xml$ sitemap.php [L,NC]
+    RewriteRule ^portfolio/?$ portfolio.php [L,QSA]
+    RewriteRule ^portfolio/([a-z0-9-]+)/?$ portfolio.php?slug=$1 [L,QSA]
+    RewriteRule ^services/?$ services.php [L,QSA]
+    RewriteRule ^services/([a-z0-9-]+)/?$ services.php?slug=$1 [L,QSA]
+    RewriteRule ^stages/?$ stages.php [L,QSA]
+    RewriteRule ^about/?$ about.php [L,QSA]
+    RewriteRule ^contacts/?$ contacts.php [L,QSA]
+    RewriteRule ^careers/?$ careers.php [L,QSA]
+    RewriteRule ^privacy/?$ privacy.php [L,QSA]
+    RewriteRule ^cookies/?$ cookies.php [L,QSA]
+    RewriteRule ^quiz/?$ quiz.php [L,QSA]
+    RewriteRule ^short-request/?$ short-request.php [L,QSA]
+    RewriteRule ^thanks/?$ thanks.php [L,QSA]
+    RewriteRule ^set-password/?$ set-password.php [L,QSA]
+    RewriteRule ^forgot-password/?$ forgot-password.php [L,QSA]
+    RewriteRule ^reset-password/?$ reset-password.php [L,QSA]
+    RewriteRule ^telegram-confirm/?$ telegram-confirm.php [L,QSA]
+    RewriteRule ^telegram-auth/?$ telegram-auth.php [L,QSA]
+    RewriteRule ^login/?$ login.php [L,QSA]
+    RewriteRule ^register/?$ register.php [L,QSA]
+    RewriteRule ^account/?$ account/index.php [L,QSA]
+</IfModule>
+
+<IfModule mod_brotli.c>
+    AddOutputFilterByType BROTLI_COMPRESS text/html text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml
+</IfModule>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://mc.yandex.ru https://mc.yandex.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mc.yandex.ru https://mc.yandex.com; font-src 'self' data:; connect-src 'self' https://mc.yandex.ru https://mc.yandex.com wss://mc.yandex.com; frame-src 'self' https://mc.yandex.ru https://mc.yandex.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+    Header always set Permissions-Policy "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+    Header always set Cross-Origin-Opener-Policy "same-origin"
+    Header always set Cross-Origin-Resource-Policy "cross-origin"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.(png|jpg|jpeg|webp|avif|svg|ico|woff|woff2)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <Files "favicon.ico">
+        Header set Cache-Control "public, max-age=86400"
+    </Files>
+    <FilesMatch "^(robots|llms)\.txt$">
+        Header set Cache-Control "public, max-age=3600"
+    </FilesMatch>
+    <FilesMatch "\.(xml|webmanifest)$">
+        Header set Cache-Control "public, max-age=3600"
+    </FilesMatch>
+</IfModule>
